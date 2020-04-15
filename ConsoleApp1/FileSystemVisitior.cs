@@ -9,50 +9,81 @@ namespace module3
     {
         public event EventHandler<StartEventArgs> Start;
         public event EventHandler<FinishEventArgs> Finish;
-        public event EventHandler<ItemFindedEventArgs<FileInfo>> FileFinded;
-        public event EventHandler<ItemFindedEventArgs<FileInfo>> FilteredFileFinded;
-        public event EventHandler<ItemFindedEventArgs<DirectoryInfo>> DirectoryFinded;
-        public event EventHandler<ItemFindedEventArgs<DirectoryInfo>> FilteredDirectoryFinded;
+        //public event EventHandler<ItemFindedEventArgs<FileInfo>> FileFinded;
+        //public event EventHandler<ItemFindedEventArgs<FileInfo>> FilteredFileFinded;
+        //public event EventHandler<ItemFindedEventArgs<DirectoryInfo>> DirectoryFinded;
+        //public event EventHandler<ItemFindedEventArgs<DirectoryInfo>> FilteredDirectoryFinded;
+
+        private IFileSystemService fileSystemService;
 
         public FileSystemVisitior()
         {
-
+            
         }
 
-        public List<string> GetDirectories(string startDir)
+        public FileSystemVisitior(IFileSystemService fileService)
         {
+            fileSystemService = fileService;
+        }
+
+
+        private void onFireStart(StartEventArgs args)
+        {
+            if (Start!=null)
+                Start.Invoke(this, args);
+        }
+
+        public List<string> GetDirectories(string startDir, string filter)
+        {
+            onFireStart(null);
             var result = new List<string>();
-            result = LoadSubDirs(startDir);
+            result = LoadSubDirs(startDir, filter);
             return result;
         }
 
-        private List<string> LoadSubDirs(string dir)
+        
+
+        private List<string> LoadSubDirs(string dir, string filter)
 
         {
             var result = new List<string>();
-            string[] subdirectoryEntries = Directory.GetDirectories(dir);
-            result.AddRange(subdirectoryEntries);
+            string[] subdirectoryEntries = fileSystemService.GetDirectories(dir);
+            var filteredDirs = FilterList(subdirectoryEntries, filter);
+            result.AddRange(filteredDirs);
+            string[] files = fileSystemService.GetFiles(dir);
+            var filteredFiles = FilterList(files, filter);
+            result.AddRange(filteredFiles);
             foreach (string item in subdirectoryEntries)
             {
-                foreach (string f in Directory.GetFiles(item))
-                {
-                    List<string> dirs = LoadSubDirs(item);
-                    List<string> files = LoadSubDirs(f);
+                    List<string> dirs = LoadSubDirs(item, filter);
                     result.AddRange(dirs);
-                    result.AddRange(files);
-                }
             }
             return result;
 
         }
 
-        private class CurrentAction
+        private List<string> FilterList(string[] originalList, string filter)
         {
-            public ActionType Action { get; set; }
-            public static CurrentAction ContinueSearch
-                => new CurrentAction { Action = ActionType.ContinueSearch };
+            var result = new List<string>();
+            for (int i = 0; i < originalList.Length; i++)
+            {
+                if (originalList[i].Contains(filter))
+                {
+                    result.Add(originalList[i]);
+                }
+                else
+                {
+                    Console.WriteLine("Nothing was found");
+                }
+               
+            }
+            return result;
         }
-
+        private void onFireFinish(FinishEventArgs args)
+        {
+            if (Finish != null)
+                Finish.Invoke(this, args);
+        }
 
     }
 }
